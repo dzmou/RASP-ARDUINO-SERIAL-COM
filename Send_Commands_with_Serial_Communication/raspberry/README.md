@@ -8,8 +8,9 @@ raspberry/
 ├── serial_handler.py
 ├── config.py
 ├── routes/
+│   ├── status.py
 │   ├── led.py
-│   └── command.py
+│   └── other.py
 ├── templates/
 │   └── index.html
 ├── requirements.txt
@@ -45,7 +46,7 @@ python3 api.py
 
 | Method | Endpoint | Description           |
 |--------|----------|-----------------------|
-| GET    | /health  | API and serial status |
+| GET    | /status  | API and serial status |
 | GET    | /led     | List valid commands   |
 | POST   | /led     | Send LED command      |
 
@@ -81,9 +82,9 @@ curl -X POST http://raspberrypi.local:5000/led \
      -d '{"command": "off"}'
 ```
 
-### Health check
+### status check
 ```
-curl http://raspberrypi.local:5000/health
+curl http://raspberrypi.local:5000/status
 ```
 
 ---

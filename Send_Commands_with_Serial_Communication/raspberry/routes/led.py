@@ -66,3 +66,4 @@ def led_commands():
             "body":   {"command": "green | blue | red | all | off"}
         }
     }), 200
+

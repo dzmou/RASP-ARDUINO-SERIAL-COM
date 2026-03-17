@@ -78,8 +78,8 @@
       font-weight: 300;
     }
 
-    /* ── Health badge ── */
-    .health-badge {
+    /* ── status badge ── */
+    .status-badge {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -95,7 +95,7 @@
       white-space: nowrap;
     }
 
-    .health-badge:hover {
+    .status-badge:hover {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
@@ -124,7 +124,7 @@
       }
     }
 
-    #health-label {
+    #status-label {
       color: var(--muted);
     }
 
@@ -268,6 +268,50 @@
 
     .led-btn.all .led-circle {
       background: linear-gradient(135deg, var(--green) 33%, var(--blue) 33% 66%, var(--red) 66%);
+    }
+
+    /* ── Custom Commands ── */
+    .cmd-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .cmd-input:focus {
+      border-color: var(--all);
+      box-shadow: 0 0 0 3px rgba(90, 63, 168, 0.15);
+    }
+
+    .btn-send {
+      padding: 0 20px;
+      border-radius: 8px;
+      border: none;
+      background: var(--all);
+      color: white;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+    }
+
+    .btn-send:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(90, 63, 168, 0.2);
+    }
+
+    .btn-send:active {
+      transform: translateY(0);
+      box-shadow: none;
     }
 
     /* ── Status bar ── */
@@ -481,9 +525,9 @@
         <h1>Arduino LED Controller</h1>
         <p>Raspberry Pi · Serial over USB</p>
       </div>
-      <div class="health-badge" onclick="checkHealth()" title="Click to refresh">
-        <div class="dot" id="health-dot"></div>
-        <span id="health-label">Checking…</span>
+      <div class="status-badge" onclick="checkstatus()" title="Click to refresh">
+        <div class="dot" id="status-dot"></div>
+        <span id="status-label">Checking…</span>
       </div>
     </header>
 
@@ -506,6 +550,16 @@
         <button class="led-btn off btn-off" onclick="sendLED('off')">
           <div class="led-circle"></div>Off
         </button>
+      </div>
+    </div>
+
+    <!-- Other Commands -->
+    <div class="card">
+      <div class="card-title">Other Commands</div>
+      <div style="display: flex; gap: 12px;">
+        <input type="text" id="other-cmd-input" class="cmd-input" placeholder="Type command here (e.g., shutdown)…">
+        <button class="btn-send" onclick="sendOtherCommand()">Send</button>
+        <button class="btn-reset" onclick="resetOtherCommand()">Reset</button>
       </div>
     </div>
 
@@ -542,12 +596,12 @@
     let activeCmd = null;
     let logEntries = [];
 
-    // ── Health check ─────────────────────────────────────────
-    async function checkHealth() {
-      const dot = document.getElementById('health-dot');
-      const label = document.getElementById('health-label');
+    // ── status check ─────────────────────────────────────────
+    async function checkstatus() {
+      const dot = document.getElementById('status-dot');
+      const label = document.getElementById('status-label');
       try {
-        const res = await fetch(`${API}/health`);
+        const res = await fetch(`${API}/status`);
         const data = await res.json();
         const up = data.status === 'ok' && data.serial === true;
         dot.className = 'dot' + (up ? ' online' : '');
@@ -586,6 +640,57 @@
 
       showSpinner(false);
     }
+
+    // ── reset other command text ──────────────────────────────────────
+    async function resetOtherCommand() {
+      const input = document.getElementById('other-cmd-input');
+      input.value = '';
+    }
+
+    // ── Send other command ──────────────────────────────────────
+    async function sendOtherCommand() {
+      const input = document.getElementById('other-cmd-input');
+      const cmd = input.value.trim();
+      if (!cmd) return;
+
+      setStatus('pending', 'SENDING', `Sending "${cmd}"…`);
+      showSpinner(true);
+
+      try {
+        const res = await fetch(`${API}/other`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: cmd })
+        });
+        const data = await res.json();
+
+        if (data.status === 'ok') {
+          setStatus('ok', 'OK', data.response || `Command: ${cmd}`);
+          addLog(cmd, 'ok', data.response || `Command: ${cmd}`);
+          input.value = ''; // clear input on success
+        } else {
+          setStatus('error', 'ERROR', data.message || 'Unknown error');
+          addLog(cmd, 'error', data.message || 'Error');
+        }
+      } catch (e) {
+        setStatus('error', 'ERROR', 'Could not reach API');
+        addLog(cmd, 'error', 'Network error');
+      }
+
+      showSpinner(false);
+    }
+
+    // Add enter key listener for input
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('other-cmd-input');
+      if (input) {
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            sendOtherCommand();
+          }
+        });
+      }
+    });
 
     // ── UI helpers ────────────────────────────────────────────
     function setStatus(type, tag, text) {
@@ -685,8 +790,8 @@
     }
 
     // ── Init ──────────────────────────────────────────────────
-    checkHealth();
-    setInterval(checkHealth, 10000);
+    checkstatus();
+    setInterval(checkstatus, 10000);
   </script>
 </body>
 

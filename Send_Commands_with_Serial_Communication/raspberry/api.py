@@ -1,12 +1,13 @@
 from flask import Flask, render_template
 from serial_handler import connect, disconnect
-from routes import led_bp, command_bp
+from routes import status_bp, led_bp, other_bp
 from config import HOST, PORT, DEBUG
 
 app = Flask(__name__)
 
-app.register_blueprint(led_bp) # register the led blueprint, it's a group of routes for led.
-app.register_blueprint(command_bp) # register the command blueprint, it's a group of routes for commands.
+app.register_blueprint(status_bp) # register the status blueprint.
+app.register_blueprint(led_bp) # register the led commands blueprint.
+app.register_blueprint(other_bp) # register the other commands blueprint.
 
 @app.route('/') 
 def index():
