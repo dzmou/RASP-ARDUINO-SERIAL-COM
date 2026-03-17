@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arduino LED Controller</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f1ec;
+      --surface: #ffffff;
+      --border: #e2ddd6;
+      --text: #1a1814;
+      --muted: #8a8480;
+      --green: #2d7a4f;
+      --green-bg: #e8f5ee;
+      --blue: #1a5fa8;
+      --blue-bg: #e4eef8;
+      --red: #c0392b;
+      --red-bg: #fcecea;
+      --all: #5a3fa8;
+      --all-bg: #eeebf8;
+      --off: #4a4540;
+      --off-bg: #eeebe6;
+      --online: #2d7a4f;
+      --offline: #c0392b;
+      --radius: 12px;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 4px;
+      font-weight: 300;
+    }
+
+    /* ── Health badge ── */
+    .health-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+      white-space: nowrap;
+    }
+
+    .health-badge:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--offline);
+      transition: background 0.4s;
+    }
+
+    .dot.online {
+      background: var(--online);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    #health-label {
+      color: var(--muted);
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .card-title {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    /* ── LED Buttons ── */
+    .led-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .led-grid .btn-all,
+    .led-grid .btn-off {
+      grid-column: span 1;
+    }
+
+    @media (max-width: 480px) {
+      .led-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .led-grid .btn-all {
+        grid-column: span 1;
+      }
+
+      .led-grid .btn-off {
+        grid-column: span 1;
+      }
+    }
+
+    .led-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 12px;
+      border: 2px solid transparent;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+      background: var(--off-bg);
+      color: var(--off);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .led-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .led-btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .led-btn.green {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .led-btn.blue {
+      background: var(--blue-bg);
+      color: var(--blue);
+    }
+
+    .led-btn.red {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .led-btn.all {
+      background: var(--all-bg);
+      color: var(--all);
+    }
+
+    .led-btn.off {
+      background: var(--off-bg);
+      color: var(--off);
+    }
+
+    .led-btn.active.green {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(45, 122, 79, 0.15);
+    }
+
+    .led-btn.active.blue {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(26, 95, 168, 0.15);
+    }
+
+    .led-btn.active.red {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.15);
+    }
+
+    .led-btn.active.all {
+      border-color: var(--all);
+      box-shadow: 0 0 0 3px rgba(90, 63, 168, 0.15);
+    }
+
+    .led-btn.active.off {
+      border-color: var(--off);
+      box-shadow: 0 0 0 3px rgba(74, 69, 64, 0.15);
+    }
+
+    .led-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.25;
+      transition: opacity 0.3s;
+    }
+
+    .led-btn.active .led-circle {
+      opacity: 1;
+    }
+
+    .led-btn.all .led-circle {
+      background: linear-gradient(135deg, var(--green) 33%, var(--blue) 33% 66%, var(--red) 66%);
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      min-height: 44px;
+    }
+
+    .status-bar .tag {
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+    }
+
+    .tag.ok {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .tag.error {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .tag.pending {
+      background: var(--all-bg);
+      color: var(--all);
+    }
+
+    #status-text {
+      color: var(--muted);
+    }
+
+    /* ── Log ── */
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 260px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .log-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .log-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .log-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 160px 80px 1fr;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--bg);
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      animation: slideIn 0.2s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .log-ts {
+      color: var(--muted);
+    }
+
+    .log-cmd {
+      font-weight: 700;
+    }
+
+    .log-cmd.green {
+      color: var(--green);
+    }
+
+    .log-cmd.blue {
+      color: var(--blue);
+    }
+
+    .log-cmd.red {
+      color: var(--red);
+    }
+
+    .log-cmd.all {
+      color: var(--all);
+    }
+
+    .log-cmd.off {
+      color: var(--off);
+    }
+
+    .log-resp {
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .log-empty {
+      text-align: center;
+      padding: 32px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+
+    /* ── Export button ── */
+    .btn-export {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-export:hover {
+      background: var(--bg);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .btn-export svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    /* ── Clear link ── */
+    .btn-clear {
+      background: none;
+      border: none;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.15s;
+    }
+
+    .btn-clear:hover {
+      color: var(--red);
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--all);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <header>
+      <div>
+        <h1>Arduino LED Controller</h1>
+        <p>Raspberry Pi · Serial over USB</p>
+      </div>
+      <div class="health-badge" onclick="checkHealth()" title="Click to refresh">
+        <div class="dot" id="health-dot"></div>
+        <span id="health-label">Checking…</span>
+      </div>
+    </header>
+
+    <!-- LED Controls -->
+    <div class="card">
+      <div class="card-title">LED Control</div>
+      <div class="led-grid">
+        <button class="led-btn green" onclick="sendLED('green')">
+          <div class="led-circle"></div>Green
+        </button>
+        <button class="led-btn blue" onclick="sendLED('blue')">
+          <div class="led-circle"></div>Blue
+        </button>
+        <button class="led-btn red" onclick="sendLED('red')">
+          <div class="led-circle"></div>Red
+        </button>
+        <button class="led-btn all btn-all" onclick="sendLED('all')">
+          <div class="led-circle"></div>All
+        </button>
+        <button class="led-btn off btn-off" onclick="sendLED('off')">
+          <div class="led-circle"></div>Off
+        </button>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="status-bar">
+      <div class="spinner" id="spinner"></div>
+      <span class="tag pending" id="status-tag">READY</span>
+      <span id="status-text">Waiting for command…</span>
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+      <div class="log-header">
+        <div class="card-title" style="margin-bottom:0">Command History</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-clear" onclick="clearLog()">Clear</button>
+          <button class="btn-export" onclick="exportReport()">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M8 2v8M5 7l3 3 3-3M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" />
+            </svg>
+            Export Report
+          </button>
+        </div>
+      </div>
+      <div class="log-list" id="log-list">
+        <div class="log-empty" id="log-empty">No commands yet</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API = '';   // same origin — Flask serves this page
+    let activeCmd = null;
+    let logEntries = [];
+
+    // ── Health check ─────────────────────────────────────────
+    async function checkHealth() {
+      const dot = document.getElementById('health-dot');
+      const label = document.getElementById('health-label');
+      try {
+        const res = await fetch(`${API}/health`);
+        const data = await res.json();
+        const up = data.status === 'ok' && data.serial === true;
+        dot.className = 'dot' + (up ? ' online' : '');
+        label.textContent = up ? 'Online' : 'Serial offline';
+      } catch {
+        dot.className = 'dot';
+        label.textContent = 'Unreachable';
+      }
+    }
+
+    // ── Send LED command ──────────────────────────────────────
+    async function sendLED(cmd) {
+      setStatus('pending', 'SENDING', `Sending "${cmd}"…`);
+      showSpinner(true);
+
+      try {
+        const res = await fetch(`${API}/led`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: cmd })
+        });
+        const data = await res.json();
+
+        if (data.status === 'ok') {
+          setStatus('ok', 'OK', data.response || `Command: ${cmd}`);
+          setActive(cmd);
+          addLog(cmd, 'ok', data.response || `Command: ${cmd}`);
+        } else {
+          setStatus('error', 'ERROR', data.message || 'Unknown error');
+          addLog(cmd, 'error', data.message || 'Error');
+        }
+      } catch (e) {
+        setStatus('error', 'ERROR', 'Could not reach API');
+        addLog(cmd, 'error', 'Network error');
+      }
+
+      showSpinner(false);
+    }
+
+    // ── UI helpers ────────────────────────────────────────────
+    function setStatus(type, tag, text) {
+      document.getElementById('status-tag').className = `tag ${type}`;
+      document.getElementById('status-tag').textContent = tag;
+      document.getElementById('status-text').textContent = text;
+    }
+
+    function setActive(cmd) {
+      document.querySelectorAll('.led-btn').forEach(b => b.classList.remove('active'));
+      const btns = document.querySelectorAll('.led-btn');
+      btns.forEach(b => {
+        if (b.classList.contains(cmd)) b.classList.add('active');
+      });
+      activeCmd = cmd;
+    }
+
+    function showSpinner(show) {
+      document.getElementById('spinner').style.display = show ? 'block' : 'none';
+    }
+
+    // ── Log ───────────────────────────────────────────────────
+    function addLog(cmd, status, response) {
+      const now = new Date();
+      const ts = now.toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      const entry = { ts, cmd, status, response, iso: now.toISOString() };
+      logEntries.unshift(entry);
+      renderLog();
+    }
+
+    function renderLog() {
+      const list = document.getElementById('log-list');
+      const empty = document.getElementById('log-empty');
+      if (logEntries.length === 0) {
+        empty.style.display = 'block';
+        list.querySelectorAll('.log-entry').forEach(e => e.remove());
+        return;
+      }
+      empty.style.display = 'none';
+      list.querySelectorAll('.log-entry').forEach(e => e.remove());
+      logEntries.forEach(e => {
+        const row = document.createElement('div');
+        row.className = 'log-entry';
+        row.innerHTML = `
+        <span class="log-ts">${e.ts}</span>
+        <span class="log-cmd ${e.cmd}">${e.cmd.toUpperCase()}</span>
+        <span class="log-resp">${e.response}</span>`;
+        list.appendChild(row);
+      });
+    }
+
+    function clearLog() {
+      logEntries = [];
+      renderLog();
+    }
+
+    // ── Export report ─────────────────────────────────────────
+    function exportReport() {
+      if (logEntries.length === 0) {
+        alert('No commands to export yet.');
+        return;
+      }
+
+      const now = new Date();
+      const header = `Arduino LED Controller — Action Report\nGenerated: ${now.toLocaleString('en-GB', {
+        weekday: 'long', day: '2-digit', month: 'long',
+        year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+      })}\nTotal commands: ${logEntries.length}\n`;
+
+      const divider = '─'.repeat(72);
+      const colHeader = `${'Timestamp'.padEnd(28)}${'Command'.padEnd(12)}Response`;
+
+      const rows = logEntries.map(e =>
+        `${e.ts.padEnd(28)}${e.cmd.toUpperCase().padEnd(12)}${e.response}`
+      ).join('\n');
+
+      // Summary
+      const counts = {};
+      logEntries.forEach(e => counts[e.cmd] = (counts[e.cmd] || 0) + 1);
+      const summary = Object.entries(counts)
+        .map(([k, v]) => `  ${k.toUpperCase().padEnd(10)} ${v} time${v > 1 ? 's' : ''}`)
+        .join('\n');
+
+      const report = [header, divider, colHeader, divider, rows, divider,
+        '\nSUMMARY BY COMMAND', summary, ''].join('\n');
+
+      const blob = new Blob([report], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `led-report-${now.toISOString().slice(0, 19).replace(/[T:]/g, '-')}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ── Init ──────────────────────────────────────────────────
+    checkHealth();
+    setInterval(checkHealth, 10000);
+  </script>
+</body>
+
+</html>
