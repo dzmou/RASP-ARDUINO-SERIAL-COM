@@ -49,6 +49,7 @@ python3 api.py
 | GET    | /status  | API and serial status |
 | GET    | /led     | List valid commands   |
 | POST   | /led     | Send LED command      |
+| POST   | /other   | Send other command    |
 
 ---
 
@@ -80,6 +81,13 @@ curl -X POST http://raspberrypi.local:5000/led \
 curl -X POST http://raspberrypi.local:5000/led \
      -H "Content-Type: application/json" \
      -d '{"command": "off"}'
+```
+
+### Send an other command
+```
+curl -X POST http://raspberrypi.local:5000/other \
+     -H "Content-Type: application/json" \
+     -d '{"command": "shutdown"}'
 ```
 
 ### status check
