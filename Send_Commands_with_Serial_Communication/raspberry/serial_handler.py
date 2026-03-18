@@ -41,7 +41,7 @@ def send_command(cmd):
         str: The response from the Arduino, or an empty string if no response.
     """
     if not is_connected():
-        return ""
+        return "Serial offline!"
 
     try:
         # Clear any old data from the input buffer so we don't read a previous response
@@ -55,7 +55,7 @@ def send_command(cmd):
         response = ser.readline().decode('utf-8').strip()
     except Exception as e:
         print(f"Error sending command: {e}")
-        response = ""
+        response = "Error sending command!"
         
     return response
 

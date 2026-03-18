@@ -43,5 +43,5 @@ def other_commands():
     return jsonify({
         "status":   "ok",
         "command":  cmd,
-        "response": response
+        "response": response if response else "No response from Arduino"
     }), 200
