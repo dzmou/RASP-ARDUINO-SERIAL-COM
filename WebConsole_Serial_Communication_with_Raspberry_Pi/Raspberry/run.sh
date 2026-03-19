@@ -9,7 +9,7 @@ cd "$(dirname "$0")/flask_app"
 
 # Install dependencies.
 echo "Installing dependencies…"
-pip install -r ../requirements.txt --break-system-packages --quiet
+pip install -r ../requirements.txt --quiet
 
 # Start the WebConsole API server.
 echo "Starting WebConsole server on port 5000…"

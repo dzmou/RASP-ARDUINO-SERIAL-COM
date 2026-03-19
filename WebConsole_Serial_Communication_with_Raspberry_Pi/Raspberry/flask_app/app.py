@@ -2,8 +2,7 @@
 app.py — Flask entry point
 """
 
-from flask import Flask
-from flask_cors import CORS
+from flask import Flask, request
 from config import Config
 from serial_handler import SerialHandler
 from csv_logger import CsvLogger
@@ -13,7 +12,16 @@ from routes import register_routes
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    CORS(app, origins=Config.CORS_ORIGINS)
+    # ── CORS headers (no flask_cors needed) ──
+    @app.after_request
+    def add_cors_headers(response):
+        origin = request.headers.get('Origin', '*')
+        allowed = Config.CORS_ORIGINS
+        if allowed == ['*'] or origin in allowed:
+            response.headers['Access-Control-Allow-Origin']  = origin
+        response.headers['Access-Control-Allow-Methods']     = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers']     = 'Content-Type'
+        return response
 
     # ── Shared services ──
     serial = SerialHandler(Config)
