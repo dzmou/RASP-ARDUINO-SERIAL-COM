@@ -1,6 +1,6 @@
 #include <DHT.h>
 
-#define DHTPIN 2
+#define DHTPIN 4
 #define DHTTYPE DHT22      // AM2302 uses the DHT22 protocol
 
 DHT dht(DHTPIN, DHTTYPE);

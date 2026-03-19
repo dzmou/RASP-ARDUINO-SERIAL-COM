@@ -9,10 +9,9 @@ A full-stack serial communication project between a **Raspberry Pi** (Flask API 
 ```
 WebConsole_Serial_Communication_with_Raspberry_Pi/
 ├── Arduino/
-│   ├── Arduino_sketch.ino                 # Main sketch
+│   ├── Arduino.ino                        # Main sketch
 │   ├── sensors.h                          # Sensor read functions
 │   ├── led_control.h                      # LED control functions
-│   ├── modes.h                            # Mode definitions & handler
 │   └── README.md
 ├── Raspberry/
 │   ├── flask_app/
@@ -39,20 +38,21 @@ WebConsole_Serial_Communication_with_Raspberry_Pi/
 
 ---
 
-## ⚙️ Operating Modes
+## ⚙️ Streaming Sensor Data
 
-| Mode | Trigger Command | Behaviour |
-|------|----------------|-----------|
-| **Default** | `default` or power-on | Arduino streams sensor data continuously |
-| **Interactive** | `interactive` | Arduino listens for commands, shows menu |
-| **Hybrid** | `hybrid` | Streams data AND responds to commands |
+By default, the Arduino is completely idle and only acts when commands are sent. It can be toggled to continuously stream sensor data to the web console:
+
+| Command | Behaviour |
+|------|-----------|
+| `stream on` | Arduino streams sensor data continuously at the configured interval |
+| `stream off` | Stops sensor streaming and returns to idle state |
 
 ---
 
 ## 🚀 Quick Start
 
 ### 1. Flash Arduino
-- Open `Arduino/Arduino_sketch.ino` in Arduino IDE
+- Open `Arduino/Arduino.ino` in Arduino IDE
 - Select your board & port, upload
 
 ### 2. Setup Raspberry Pi

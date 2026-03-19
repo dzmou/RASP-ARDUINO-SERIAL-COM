@@ -4,29 +4,50 @@
 //  github.com/dzmou/RASP-ARDOUINO-SERIAL-COM
 // ════════════════════════════════════════════════════════════════
 
-#include "modes.h"
 #include "sensors.h"
 #include "led_control.h"
 
 // ── Globals ───────────────────────────────────────────────────
-int           currentMode    = MODE_DEFAULT;
-unsigned long streamInterval = 2000;       // ms between stream packets
+bool          isStreaming    = false;
+unsigned long streamInterval = 2000;       // ms between stream packets (default 2 s)
 unsigned long lastStream     = 0;
 String        cmdBuffer      = "";
 LedState      leds;
+
+// ── Interactive Menu ──────────────────────────────────────────
+void printMenu() {
+  Serial.println(F("[MENU]"));
+  Serial.println(F("  read              - Read all sensors"));
+  Serial.println(F("  read temp         - Temperature only"));
+  Serial.println(F("  read hum          - Humidity only"));
+  Serial.println(F("  read wind         - Wind speed & direction"));
+  Serial.println(F("  read lux          - Luminosity only"));
+  Serial.println(F("  led <color> on/off- Control LED (red/green/blue)"));
+  Serial.println(F("  led all on/off    - All LEDs on or off"));
+  Serial.println(F("  interval <s>      - Set stream interval in seconds (1-60)"));
+  Serial.println(F("  status            - Device info & current state"));
+  Serial.println(F("  stream on         - Start continuous sensor streaming"));
+  Serial.println(F("  stream off        - Stop continuous sensor streaming"));
+  Serial.println(F("  reset             - Soft reset device"));
+  Serial.println(F("  ping              - Health check"));
+  Serial.println(F("  menu              - Show this menu"));
+  Serial.println(F("[END MENU]"));
+}
 
 // ── Setup ─────────────────────────────────────────────────────
 void setup() {
   Serial.begin(9600);
   setupLeds();
+  setupSensors();    // initialise AM2302 (includes 2 s warm-up)
   randomSeed(analogRead(A5));
 
   delay(500);   // Let serial settle after reset
   Serial.println(F("[BOOT] WebConsole_Serial_Communication_with_Raspberry_Pi v1.0"));
-  Serial.println(F("[BOOT] Mode: default — streaming started"));
+  Serial.println(F("[BOOT] Idle — streaming OFF by default"));
   Serial.print(F("[BOOT] Interval: "));
-  Serial.print(streamInterval);
-  Serial.println(F(" ms"));
+  Serial.print(streamInterval / 1000);
+  Serial.println(F(" s"));
+  printMenu();  // Show available commands on boot
 }
 
 // ── Main Loop ─────────────────────────────────────────────────
@@ -36,7 +57,7 @@ void loop() {
 
   unsigned long now = millis();
 
-  if (currentMode == MODE_DEFAULT || currentMode == MODE_HYBRID) {
+  if (isStreaming) {
     if (now - lastStream >= streamInterval) {
       lastStream = now;
       streamPacket();
@@ -44,11 +65,9 @@ void loop() {
   }
 }
 
-// ── Stream JSON Packet (Default / Hybrid) ─────────────────────
+// ── Stream JSON Packet ────────────────────────────────────────
 void streamPacket() {
-  Serial.print(F("{\"mode\":\""));
-  Serial.print(modeName(currentMode));
-  Serial.print(F("\",\"ts\":"));
+  Serial.print(F("{\"streaming\":true,\"ts\":"));
   Serial.print(millis());
   Serial.print(F(",\"temp\":"));
   Serial.print(readTemp(), 1);
@@ -86,23 +105,16 @@ void handleCommand(String cmd) {
   cmd.toLowerCase();
   cmd.trim();
 
-  // ── Mode switching ──
-  if (cmd == "default" || cmd == "mode default") {
-    currentMode = MODE_DEFAULT;
-    lastStream  = 0;
-    Serial.println(F("[MODE] Switched to DEFAULT (streaming)"));
+  // ── Streaming toggles ──
+  if (cmd == "stream on") {
+    isStreaming = true;
+    lastStream = 0;
+    Serial.println(F("[STREAM] Streaming ON"));
     return;
   }
-  if (cmd == "interactive" || cmd == "mode interactive") {
-    currentMode = MODE_INTERACTIVE;
-    Serial.println(F("[MODE] Switched to INTERACTIVE"));
-    printMenu();
-    return;
-  }
-  if (cmd == "hybrid" || cmd == "mode hybrid") {
-    currentMode = MODE_HYBRID;
-    lastStream  = 0;
-    Serial.println(F("[MODE] Switched to HYBRID (stream + listen)"));
+  if (cmd == "stream off") {
+    isStreaming = false;
+    Serial.println(F("[STREAM] Streaming OFF"));
     return;
   }
 
@@ -113,8 +125,8 @@ void handleCommand(String cmd) {
   }
 
   if (cmd == "ping") {
-    Serial.print(F("[PONG] alive mode="));
-    Serial.print(modeName(currentMode));
+    Serial.print(F("[PONG] alive streaming="));
+    Serial.print(isStreaming ? "ON" : "OFF");
     Serial.print(F(" uptime="));
     Serial.print(millis() / 1000);
     Serial.println(F("s"));
@@ -122,8 +134,8 @@ void handleCommand(String cmd) {
   }
 
   if (cmd == "status") {
-    Serial.print(F("[STATUS] mode="));      Serial.println(modeName(currentMode));
-    Serial.print(F("[STATUS] interval="));  Serial.print(streamInterval); Serial.println(F("ms"));
+    Serial.print(F("[STATUS] streaming=")); Serial.println(isStreaming ? "ON" : "OFF");
+    Serial.print(F("[STATUS] interval="));  Serial.print(streamInterval / 1000); Serial.println(F("s"));
     Serial.print(F("[STATUS] uptime="));    Serial.print(millis()/1000);  Serial.println(F("s"));
     Serial.print(F("[STATUS] fw=v1.0 port=9600"));
     Serial.println();
@@ -178,16 +190,16 @@ void handleCommand(String cmd) {
     return;
   }
 
-  // ── Interval: interval <ms> ──
+  // ── Interval: interval <s> ──
   if (cmd.startsWith("interval ")) {
     long val = cmd.substring(9).toInt();
-    if (val < 500 || val > 60000) {
-      Serial.println(F("[ERR] Interval out of range (500-60000 ms)"));
+    if (val < 1 || val > 24 * 60 * 60) { // min : 1s , max : 24h
+      Serial.println(F("[ERR] Interval out of range (1s-86400s(24h)) "));
     } else {
-      streamInterval = (unsigned long)val;
+      streamInterval = (unsigned long)(val * 1000); // Convert seconds to milliseconds
       Serial.print(F("[CFG] Interval set to "));
-      Serial.print(streamInterval);
-      Serial.println(F(" ms"));
+      Serial.print(val);
+      Serial.println(F(" s"));
     }
     return;
   }
@@ -206,7 +218,7 @@ void handleCommand(String cmd) {
   // ── Unknown ──
   Serial.print(F("[ERR] Unknown command: "));
   Serial.println(cmd);
-  if (currentMode == MODE_INTERACTIVE) {
+  if (!isStreaming) {
     Serial.println(F("      Type 'menu' for available commands."));
   }
 }

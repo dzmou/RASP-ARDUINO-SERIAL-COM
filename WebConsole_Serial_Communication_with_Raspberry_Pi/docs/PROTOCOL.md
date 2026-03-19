@@ -4,17 +4,17 @@
 
 ---
 
-## 1. Default Mode — Streaming Payload
+## 1. Sensor Streaming
 
-Arduino sends a JSON line every `STREAM_INTERVAL` ms (default 2000 ms):
+When streaming is enabled (`stream on`), the Arduino sends a JSON line every `STREAM_INTERVAL` s (default 2 s):
 
 ```json
-{"mode":"default","ts":12345,"temp":24.3,"hum":58.1,"wind_spd":3.2,"wind_dir":"NE","lux":812,"leds":{"red":false,"green":true,"blue":false}}
+{"streaming":true,"ts":12345,"temp":24.3,"hum":58.1,"wind_spd":3.2,"wind_dir":"NE","lux":812,"leds":{"red":false,"green":true,"blue":false}}
 ```
 
 | Field | Type | Unit | Description |
 |-------|------|------|-------------|
-| `mode` | string | — | Current mode (`default`/`interactive`/`hybrid`) |
+| `streaming` | bool | — | Always `true` when sent from the autonomous stream |
 | `ts` | int | ms | `millis()` timestamp |
 | `temp` | float | °C | Temperature |
 | `hum` | float | % | Humidity |
@@ -25,7 +25,7 @@ Arduino sends a JSON line every `STREAM_INTERVAL` ms (default 2000 ms):
 
 ---
 
-## 2. Interactive Mode — Commands & Responses
+## 2. Serial Commands
 
 ### Commands sent by Raspberry Pi → Arduino
 
@@ -45,37 +45,33 @@ Arduino sends a JSON line every `STREAM_INTERVAL` ms (default 2000 ms):
 | `led blue off` | Turn blue LED off |
 | `led all on` | All LEDs on |
 | `led all off` | All LEDs off |
-| `interval <ms>` | Set stream interval (e.g. `interval 5000`) |
-| `status` | Device info + current mode |
-| `mode default` | Switch to default mode |
-| `mode interactive` | Switch to interactive mode |
-| `mode hybrid` | Switch to hybrid mode |
+| `interval <s>` | Set stream interval in seconds (e.g. `interval 5`) |
+| `status` | Device info + current streaming state |
+| `stream on` | Start continuous sensor streaming |
+| `stream off` | Stop continuous sensor streaming |
 | `reset` | Soft reset Arduino |
 | `ping` | Health check |
 
-### Arduino Responses (Interactive)
+### Arduino Responses
 
 ```
 [MENU]
-  1. read          - Read all sensors
-  2. read <sensor> - Read specific sensor (temp/hum/wind/lux)
-  3. led <color> <on/off> - Control LED
-  4. led all <on/off>     - All LEDs
-  5. interval <ms>        - Set stream interval
-  6. status        - Device info
-  7. mode <default/interactive/hybrid> - Switch mode
-  8. reset         - Soft reset
-  9. ping          - Health check
+  read              - Read all sensors
+  read temp         - Temperature only
+  read hum          - Humidity only
+  read wind         - Wind speed & direction
+  read lux          - Luminosity only
+  led <color> on/off- Control LED (red/green/blue)
+  led all on/off    - All LEDs on or off
+  interval <s>      - Set stream interval in seconds (1-86400(24h))
+  status            - Device info & current state
+  stream on         - Start continuous sensor streaming
+  stream off        - Stop continuous sensor streaming
+  reset             - Soft reset device
+  ping              - Health check
+  menu              - Show this menu
 [END MENU]
 ```
-
----
-
-## 3. Hybrid Mode
-
-- Arduino streams data at the set interval
-- Simultaneously parses incoming commands between stream cycles
-- Commands that arrive mid-stream are queued and executed after next packet
 
 ---
 
@@ -84,5 +80,5 @@ Arduino sends a JSON line every `STREAM_INTERVAL` ms (default 2000 ms):
 ```
 [ERR] Unknown command: <cmd>
 [ERR] Invalid LED color: <color>
-[ERR] Interval out of range (500–60000 ms)
+[ERR] Interval out of range (1-86400(24h))
 ```

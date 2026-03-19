@@ -836,7 +836,7 @@
       <div class="chip">
         <div class="dot" id="dot-arduino"></div><span id="lbl-arduino">ARDUINO</span>
       </div>
-      <div class="chip">MODE: <span id="hdr-mode" style="color:var(--green);margin-left:5px">DEFAULT</span></div>
+      <div class="chip">STREAM: <span id="hdr-stream" style="color:var(--green);margin-left:5px">OFF</span></div>
       <div class="chip">
         <div class="strip">
           <div class="sdot" id="sdot-red" title="Red LED"></div>
@@ -848,9 +848,8 @@
   </header>
 
   <div class="mode-bar">
-    <button class="mode-tab active" data-mode="default">⬡ DEFAULT</button>
-    <button class="mode-tab" data-mode="interactive">⌨ INTERACTIVE</button>
-    <button class="mode-tab" data-mode="hybrid">⚡ HYBRID</button>
+    <button class="mode-tab" data-stream="on" id="tab-stream-on">⬡ STREAM ON</button>
+    <button class="mode-tab active" data-stream="off" id="tab-stream-off">⌨ STREAM OFF</button>
   </div>
 
   <div class="workspace">
@@ -893,8 +892,8 @@
       <div class="interval-box">
         <div class="interval-label">STREAM INTERVAL</div>
         <div class="interval-row">
-          <input class="interval-inp" id="interval-inp" type="number" value="2000" min="500" max="60000" step="500">
-          <span style="font-size:10px;color:var(--muted)">ms</span>
+          <input class="interval-inp" id="interval-inp" type="number" value="2" min="1" max="60" step="1">
+          <span style="font-size:10px;color:var(--muted)">s</span>
           <button class="btn-sm" id="interval-set">SET</button>
         </div>
       </div>
@@ -906,7 +905,7 @@
         <div class="tbd r"></div>
         <div class="tbd y"></div>
         <div class="tbd g"></div>
-        <div class="tbt" id="tbt-title">/dev/ttyUSB0 @ 9600 — DEFAULT MODE</div>
+        <div class="tbt" id="tbt-title">/dev/ttyUSB0 @ 9600 — STREAM OFF</div>
         <button class="tb-clear" id="btn-clear">CLEAR</button>
       </div>
       <div id="terminal"></div>
@@ -965,7 +964,7 @@
           <div class="port-row"><span class="pk">PORT</span><span class="pv ok">/dev/ttyUSB0</span></div>
           <div class="port-row"><span class="pk">BAUD</span><span class="pv">9600</span></div>
           <div class="port-row"><span class="pk">RESET DELAY</span><span class="pv">2 s</span></div>
-          <div class="port-row"><span class="pk">CURRENT MODE</span><span class="pv warn" id="pv-mode">DEFAULT</span>
+          <div class="port-row"><span class="pk">STREAMING</span><span class="pv warn" id="pv-stream">OFF</span>
           </div>
           <div class="port-row"><span class="pk">INTERVAL</span><span class="pv" id="pv-interval">2000 ms</span></div>
         </div>
@@ -999,7 +998,7 @@
     <span>API</span><span class="sb-sep">|</span>
     <span id="sb-url" style="color:var(--blue)">http://localhost:5000</span>
     <span class="sb-sep">|</span>
-    <span>MODE: <span id="sb-mode">DEFAULT</span></span>
+    <span>STREAM: <span id="sb-stream">OFF</span></span>
     <span class="sb-sep">|</span>
     <span>LAT: <span id="sb-latency">--</span>ms</span>
     <span class="sb-sep">|</span>
@@ -1011,7 +1010,7 @@
     const API = '';   // empty = same origin (Flask serves this page)
     let txC = 0, rxC = 0;
     let ledState = { red: false, green: false, blue: false };
-    let currentMode = 'default';
+    let isStreaming = false;
     let t0 = Date.now();
     let pollTimer = null;
     let cmdHistory = [], histIdx = -1;
@@ -1091,7 +1090,7 @@
         ledState.red = !!d.leds.red; ledState.green = !!d.leds.green; ledState.blue = !!d.leds.blue;
         renderLeds();
       }
-      if (d.mode) setMode(d.mode, false);
+      if (d.streaming !== undefined) setStreaming(d.streaming, false);
     }
 
     // ── LED state ─────────────────────────────────────────────────
@@ -1122,15 +1121,17 @@
       renderLeds();
     }
 
-    // ── Mode ──────────────────────────────────────────────────────
-    function setMode(m, sendCmd = true) {
-      currentMode = m;
-      document.getElementById('hdr-mode').textContent = m.toUpperCase();
-      document.getElementById('sb-mode').textContent = m.toUpperCase();
-      document.getElementById('pv-mode').textContent = m.toUpperCase();
-      document.getElementById('tbt-title').textContent = `/dev/ttyUSB0 @ 9600 — ${m.toUpperCase()} MODE`;
-      document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
-      if (sendCmd) send('mode ' + m);
+    // ── Streaming ──────────────────────────────────────────────────────
+    function setStreaming(isOn, sendCmd = true) {
+      isStreaming = isOn;
+      const t = isOn ? 'ON' : 'OFF';
+      document.getElementById('hdr-stream').textContent = t;
+      document.getElementById('sb-stream').textContent = t;
+      document.getElementById('pv-stream').textContent = t;
+      document.getElementById('tbt-title').textContent = `/dev/ttyUSB0 @ 9600 — STREAM ${t}`;
+      document.getElementById('tab-stream-on').classList.toggle('active', isOn);
+      document.getElementById('tab-stream-off').classList.toggle('active', !isOn);
+      if (sendCmd) send('stream ' + (isOn ? 'on' : 'off'));
     }
 
     // ── CSV list ──────────────────────────────────────────────────
@@ -1184,7 +1185,7 @@
     });
 
     document.querySelectorAll('.mode-tab').forEach(t => {
-      t.addEventListener('click', () => setMode(t.dataset.mode));
+      t.addEventListener('click', () => setStreaming(t.dataset.stream === 'on'));
     });
 
     document.querySelectorAll('.qc').forEach(b => {
@@ -1210,18 +1211,18 @@
 
     document.getElementById('interval-set').addEventListener('click', () => {
       const v = parseInt(document.getElementById('interval-inp').value);
-      if (v >= 500 && v <= 60000) {
+      if (v >= 1 && v <= 86400) { // min : 1s , max : 24h
         send('interval ' + v);
-        document.getElementById('pv-interval').textContent = v + ' ms';
+        document.getElementById('pv-interval').textContent = v + ' s';
       } else {
-        log('Interval must be 500–60000 ms', 'err');
+        log('Interval must be 1s – 86400s (24h)', 'err');
       }
     });
 
     // ── Boot sequence ─────────────────────────────────────────────
     (async () => {
       log('WebConsole_Serial_Communication_with_Raspberry_Pi v1.0', 'info');
-      log('Three modes: default | interactive | hybrid', 'sys');
+      log('Sensor streaming is OFF by default. Click STREAM ON to start.', 'sys');
       await new Promise(r => setTimeout(r, 300));
       await checkStatus();
       log('Polling sensor data…', 'sys');
