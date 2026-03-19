@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RASP-ARDUINO // SERIAL CONSOLE</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap');
+
+    :root {
+      --bg: #0a0c0f;
+      --surface: #0f1318;
+      --border: #1e2832;
+      --green: #00ff9d;
+      --blue: #00aaff;
+      --red: #ff3a5c;
+      --amber: #ffb830;
+      --purple: #c084fc;
+      --text: #c8d8e8;
+      --muted: #4a5e70;
+      --glow-g: 0 0 8px #00ff9d66;
+      --glow-b: 0 0 8px #00aaff66;
+      --glow-r: 0 0 8px #ff3a5c66;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, .07) 2px, rgba(0, 0, 0, .07) 4px);
+      pointer-events: none;
+      z-index: 9999
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 12px;
+      flex-wrap: wrap
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      border: 2px solid var(--green);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: var(--glow-g);
+      animation: pulse-g 3s ease-in-out infinite
+    }
+
+    @keyframes pulse-g {
+
+      0%,
+      100% {
+        box-shadow: var(--glow-g)
+      }
+
+      50% {
+        box-shadow: 0 0 18px #00ff9d99
+      }
+    }
+
+    .logo-text {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 3px;
+      color: var(--green)
+    }
+
+    .logo-sub {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2px
+    }
+
+    .hdr-right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      padding: 3px 9px;
+      border: 1px solid var(--border);
+      border-radius: 4px
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background .3s, box-shadow .3s
+    }
+
+    .dot.on {
+      background: var(--green);
+      box-shadow: var(--glow-g);
+      animation: blink 2s step-end infinite
+    }
+
+    .dot.err {
+      background: var(--red);
+      box-shadow: var(--glow-r)
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: .3
+      }
+    }
+
+    .strip {
+      display: flex;
+      gap: 6px;
+      align-items: center
+    }
+
+    .sdot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #1a2530;
+      transition: background .3s, box-shadow .3s
+    }
+
+    .sdot.on-red {
+      background: var(--red);
+      box-shadow: var(--glow-r)
+    }
+
+    .sdot.on-green {
+      background: var(--green);
+      box-shadow: var(--glow-g)
+    }
+
+    .sdot.on-blue {
+      background: var(--blue);
+      box-shadow: var(--glow-b)
+    }
+
+    /* MODE TABS */
+    .mode-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface)
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 8px 0;
+      text-align: center;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none
+    }
+
+    .mode-tab:hover {
+      color: var(--text)
+    }
+
+    .mode-tab.active {
+      color: var(--green);
+      border-bottom-color: var(--green)
+    }
+
+    /* WORKSPACE */
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 240px 1fr 260px;
+      height: calc(100vh - 100px);
+      overflow: hidden
+    }
+
+    .panel {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .panel.right {
+      border-right: none;
+      border-left: 1px solid var(--border)
+    }
+
+    .ph {
+      padding: 9px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .ph span {
+      color: var(--green)
+    }
+
+    /* LED PANEL */
+    .led-grid {
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      overflow-y: auto
+    }
+
+    .led-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 13px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color .2s, background .2s;
+      position: relative;
+      overflow: hidden
+    }
+
+    .led-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity .2s
+    }
+
+    .led-btn[data-c="green"] {
+      --lc: #00ff9d;
+      --lg: #00ff9d22
+    }
+
+    .led-btn[data-c="blue"] {
+      --lc: #00aaff;
+      --lg: #00aaff22
+    }
+
+    .led-btn[data-c="red"] {
+      --lc: #ff3a5c;
+      --lg: #ff3a5c22
+    }
+
+    .led-btn[data-c="all"] {
+      --lc: #ffffff;
+      --lg: #ffffff15
+    }
+
+    .led-btn[data-c="off"] {
+      --lc: #4a5e70;
+      --lg: #4a5e7015
+    }
+
+    .led-btn:hover {
+      border-color: var(--lc)
+    }
+
+    .led-btn:hover::before,
+    .led-btn.active::before {
+      opacity: 1;
+      background: var(--lg)
+    }
+
+    .led-btn.active {
+      border-color: var(--lc)
+    }
+
+    .bulb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: background .3s, box-shadow .3s;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .led-btn.active .bulb,
+    .led-btn:hover .bulb {
+      background: var(--lc);
+      box-shadow: 0 0 10px var(--lc), 0 0 20px var(--lc)
+    }
+
+    .ll {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 1px
+    }
+
+    .led-btn.active .ll {
+      color: var(--lc)
+    }
+
+    .lpin {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--muted)
+    }
+
+    .sep {
+      height: 1px;
+      background: var(--border);
+      margin: 2px 0
+    }
+
+    /* INTERVAL CONTROL */
+    .interval-box {
+      padding: 14px;
+      border-top: 1px solid var(--border)
+    }
+
+    .interval-label {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600
+    }
+
+    .interval-row {
+      display: flex;
+      gap: 6px;
+      align-items: center
+    }
+
+    .interval-inp {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      padding: 5px 8px;
+      outline: none
+    }
+
+    .interval-inp:focus {
+      border-color: var(--blue)
+    }
+
+    .btn-sm {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 1px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: color .2s, border-color .2s
+    }
+
+    .btn-sm:hover {
+      color: var(--green);
+      border-color: var(--green)
+    }
+
+    /* TERMINAL */
+    .terminal-wrap {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .ttb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border)
+    }
+
+    .tbd {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%
+    }
+
+    .tbd.r {
+      background: #ff5f57
+    }
+
+    .tbd.y {
+      background: #ffbd2e
+    }
+
+    .tbd.g {
+      background: #28ca42
+    }
+
+    .tbt {
+      flex: 1;
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 2px
+    }
+
+    .tb-clear {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 2px 7px;
+      cursor: pointer;
+      transition: color .2s, border-color .2s
+    }
+
+    .tb-clear:hover {
+      color: var(--red);
+      border-color: var(--red)
+    }
+
+    #terminal {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      font-size: 12.5px;
+      line-height: 1.7;
+      scroll-behavior: smooth
+    }
+
+    #terminal::-webkit-scrollbar {
+      width: 3px
+    }
+
+    #terminal::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px
+    }
+
+    .lg {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1px
+    }
+
+    .lts {
+      color: var(--muted);
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-top: 2px
+    }
+
+    .lpfx {
+      flex-shrink: 0
+    }
+
+    .lmsg {
+      word-break: break-all
+    }
+
+    .lg.tx .lpfx,
+    .lg.tx .lmsg {
+      color: var(--amber)
+    }
+
+    .lg.rx .lpfx,
+    .lg.rx .lmsg {
+      color: var(--green)
+    }
+
+    .lg.err .lpfx,
+    .lg.err .lmsg {
+      color: var(--red)
+    }
+
+    .lg.sys .lmsg {
+      color: var(--muted);
+      font-style: italic
+    }
+
+    .lg.info .lmsg {
+      color: var(--blue)
+    }
+
+    .lg.data .lmsg {
+      color: var(--purple)
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      padding: 9px 12px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      gap: 7px
+    }
+
+    .prompt {
+      color: var(--green);
+      font-size: 13px;
+      flex-shrink: 0
+    }
+
+    #cmd-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12.5px;
+      color: var(--text);
+      caret-color: var(--green)
+    }
+
+    #cmd-input::placeholder {
+      color: var(--muted)
+    }
+
+    .send-btn {
+      background: var(--green);
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 5px 13px;
+      cursor: pointer;
+      transition: background .2s, box-shadow .2s
+    }
+
+    .send-btn:hover {
+      background: #00ffb3;
+      box-shadow: var(--glow-g)
+    }
+
+    /* RIGHT PANEL */
+    .info-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px
+    }
+
+    .info-scroll::-webkit-scrollbar {
+      width: 3px
+    }
+
+    .info-scroll::-webkit-scrollbar-thumb {
+      background: var(--border)
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 13px 14px;
+      background: linear-gradient(135deg, #0f181e, #0f1318)
+    }
+
+    .clabel {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      margin-bottom: 7px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600
+    }
+
+    .cval {
+      font-size: 30px;
+      letter-spacing: -1px;
+      display: flex;
+      align-items: baseline;
+      gap: 5px
+    }
+
+    .cunit {
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .csub {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px
+    }
+
+    .cbar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden
+    }
+
+    .cfill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 1s ease
+    }
+
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px
+    }
+
+    .sensor-mini {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 11px;
+      background: var(--surface)
+    }
+
+    .sm-label {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      margin-bottom: 4px
+    }
+
+    .sm-val {
+      font-size: 18px;
+      color: var(--text);
+      display: flex;
+      align-items: baseline;
+      gap: 3px
+    }
+
+    .sm-unit {
+      font-size: 11px;
+      color: var(--muted)
+    }
+
+    .port-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px
+    }
+
+    .port-row:last-child {
+      border-bottom: none
+    }
+
+    .pk {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 1px
+    }
+
+    .pv {
+      color: var(--text)
+    }
+
+    .pv.ok {
+      color: var(--green)
+    }
+
+    .pv.warn {
+      color: var(--amber)
+    }
+
+    .qc-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px
+    }
+
+    .qc {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 3px 9px;
+      cursor: pointer;
+      background: none;
+      transition: color .2s, border-color .2s
+    }
+
+    .qc:hover {
+      color: var(--green);
+      border-color: var(--green)
+    }
+
+    .csv-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 120px;
+      overflow-y: auto
+    }
+
+    .csv-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px
+    }
+
+    .csv-dl {
+      color: var(--blue);
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 10px
+    }
+
+    .csv-dl:hover {
+      text-decoration: underline
+    }
+
+    /* STATUS BAR */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 18px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--muted);
+      flex-wrap: wrap
+    }
+
+    .sb-sep {
+      color: var(--border)
+    }
+
+    #sb-latency {
+      color: var(--amber)
+    }
+
+    #sb-uptime {
+      margin-left: auto
+    }
+
+    #sb-mode {
+      color: var(--green);
+      font-weight: bold
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">RASP-ARDUINO</div>
+        <div class="logo-sub">SERIAL CONSOLE v1.0</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="chip">
+        <div class="dot" id="dot-raspi"></div><span id="lbl-raspi">RASPI</span>
+      </div>
+      <div class="chip">
+        <div class="dot" id="dot-arduino"></div><span id="lbl-arduino">ARDUINO</span>
+      </div>
+      <div class="chip">MODE: <span id="hdr-mode" style="color:var(--green);margin-left:5px">DEFAULT</span></div>
+      <div class="chip">
+        <div class="strip">
+          <div class="sdot" id="sdot-red" title="Red LED"></div>
+          <div class="sdot" id="sdot-green" title="Green LED"></div>
+          <div class="sdot" id="sdot-blue" title="Blue LED"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="mode-bar">
+    <button class="mode-tab active" data-mode="default">⬡ DEFAULT</button>
+    <button class="mode-tab" data-mode="interactive">⌨ INTERACTIVE</button>
+    <button class="mode-tab" data-mode="hybrid">⚡ HYBRID</button>
+  </div>
+
+  <div class="workspace">
+    <!-- LEFT: LED + interval -->
+    <div class="panel">
+      <div class="ph">⬡ <span>LED</span> CONTROL</div>
+      <div class="led-grid">
+        <button class="led-btn" data-c="green" data-cmd="led green on">
+          <div class="bulb">●</div>
+          <div>
+            <div class="ll">GREEN</div>
+          </div><span class="lpin">D9</span>
+        </button>
+        <button class="led-btn" data-c="blue" data-cmd="led blue on">
+          <div class="bulb">●</div>
+          <div>
+            <div class="ll">BLUE</div>
+          </div><span class="lpin">D8</span>
+        </button>
+        <button class="led-btn" data-c="red" data-cmd="led red on">
+          <div class="bulb">●</div>
+          <div>
+            <div class="ll">RED</div>
+          </div><span class="lpin">D10</span>
+        </button>
+        <div class="sep"></div>
+        <button class="led-btn" data-c="all" data-cmd="led all on">
+          <div class="bulb">◉</div>
+          <div>
+            <div class="ll">ALL ON</div>
+          </div>
+        </button>
+        <button class="led-btn" data-c="off" data-cmd="led all off">
+          <div class="bulb">○</div>
+          <div>
+            <div class="ll">ALL OFF</div>
+          </div>
+        </button>
+      </div>
+      <div class="interval-box">
+        <div class="interval-label">STREAM INTERVAL</div>
+        <div class="interval-row">
+          <input class="interval-inp" id="interval-inp" type="number" value="2000" min="500" max="60000" step="500">
+          <span style="font-size:10px;color:var(--muted)">ms</span>
+          <button class="btn-sm" id="interval-set">SET</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: TERMINAL -->
+    <div class="terminal-wrap">
+      <div class="ttb">
+        <div class="tbd r"></div>
+        <div class="tbd y"></div>
+        <div class="tbd g"></div>
+        <div class="tbt" id="tbt-title">/dev/ttyUSB0 @ 9600 — DEFAULT MODE</div>
+        <button class="tb-clear" id="btn-clear">CLEAR</button>
+      </div>
+      <div id="terminal"></div>
+      <div class="input-row">
+        <div class="prompt">$&gt;</div>
+        <input id="cmd-input" placeholder="type command… (try 'menu')" autocomplete="off" spellcheck="false">
+        <button class="send-btn" id="btn-send">SEND</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: sensors + config -->
+    <div class="panel right">
+      <div class="ph">◈ <span>SENSORS</span> & CONFIG</div>
+      <div class="info-scroll">
+
+        <div class="sensor-grid">
+          <div class="card">
+            <div class="clabel">TEMP · AM2302</div>
+            <div class="cval"><span id="v-temp">--.-</span><span class="cunit">°C</span></div>
+            <div class="cbar">
+              <div class="cfill" id="b-temp" style="width:0%;background:linear-gradient(90deg,var(--blue),var(--red))">
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="clabel">HUMIDITY</div>
+            <div class="cval"><span id="v-hum">--.-</span><span class="cunit">%</span></div>
+            <div class="cbar">
+              <div class="cfill" id="b-hum" style="width:0%;background:linear-gradient(90deg,var(--blue),var(--green))">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sensor-grid">
+          <div class="sensor-mini">
+            <div class="sm-label">WIND SPD</div>
+            <div class="sm-val"><span id="v-wspd">--</span><span class="sm-unit">m/s</span></div>
+          </div>
+          <div class="sensor-mini">
+            <div class="sm-label">WIND DIR</div>
+            <div class="sm-val" id="v-wdir">--</div>
+          </div>
+          <div class="sensor-mini">
+            <div class="sm-label">LUMINOSITY</div>
+            <div class="sm-val"><span id="v-lux">--</span><span class="sm-unit">lx</span></div>
+          </div>
+          <div class="sensor-mini">
+            <div class="sm-label">LAST UPDATE</div>
+            <div class="sm-val" style="font-size:13px" id="v-ts">--</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="clabel">PORT CONFIG</div>
+          <div class="port-row"><span class="pk">PORT</span><span class="pv ok">/dev/ttyUSB0</span></div>
+          <div class="port-row"><span class="pk">BAUD</span><span class="pv">9600</span></div>
+          <div class="port-row"><span class="pk">RESET DELAY</span><span class="pv">2 s</span></div>
+          <div class="port-row"><span class="pk">CURRENT MODE</span><span class="pv warn" id="pv-mode">DEFAULT</span>
+          </div>
+          <div class="port-row"><span class="pk">INTERVAL</span><span class="pv" id="pv-interval">2000 ms</span></div>
+        </div>
+
+        <div>
+          <div class="clabel" style="margin-bottom:7px">QUICK COMMANDS</div>
+          <div class="qc-grid">
+            <button class="qc" data-q="menu">menu</button>
+            <button class="qc" data-q="read">read</button>
+            <button class="qc" data-q="status">status</button>
+            <button class="qc" data-q="ping">ping</button>
+            <button class="qc" data-q="read temp">temp</button>
+            <button class="qc" data-q="read wind">wind</button>
+            <button class="qc" data-q="read lux">lux</button>
+            <button class="qc" data-q="reset">reset</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="clabel" style="margin-bottom:7px">CSV DATA FILES</div>
+          <div class="csv-list" id="csv-list">
+            <div style="font-size:11px;color:var(--muted)">No files yet.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span>API</span><span class="sb-sep">|</span>
+    <span id="sb-url" style="color:var(--blue)">http://localhost:5000</span>
+    <span class="sb-sep">|</span>
+    <span>MODE: <span id="sb-mode">DEFAULT</span></span>
+    <span class="sb-sep">|</span>
+    <span>LAT: <span id="sb-latency">--</span>ms</span>
+    <span class="sb-sep">|</span>
+    <span>TX:<span id="sb-tx">0</span> RX:<span id="sb-rx">0</span></span>
+    <span id="sb-uptime">UP: 00:00:00</span>
+  </div>
+
+  <script>
+    const API = '';   // empty = same origin (Flask serves this page)
+    let txC = 0, rxC = 0;
+    let ledState = { red: false, green: false, blue: false };
+    let currentMode = 'default';
+    let t0 = Date.now();
+    let pollTimer = null;
+    let cmdHistory = [], histIdx = -1;
+
+    // ── Timestamps ────────────────────────────────────────────────
+    function ts() { const d = new Date(); return [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2, '0')).join(':'); }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    // ── Terminal log ──────────────────────────────────────────────
+    function log(msg, type = 'sys') {
+      const pfx = { tx: 'TX ▶', rx: 'RX ◀', err: '!! ', sys: '// ', info: '## ', data: '~~ ' };
+      const el = document.createElement('div');
+      el.className = `lg ${type}`;
+      el.innerHTML = `<span class="lts">${ts()}</span><span class="lpfx">${pfx[type] || '//'}</span><span class="lmsg">${esc(msg)}</span>`;
+      const t = document.getElementById('terminal');
+      t.appendChild(el); t.scrollTop = t.scrollHeight;
+      rxC++; document.getElementById('sb-rx').textContent = rxC;
+    }
+
+    // ── API helpers ───────────────────────────────────────────────
+    async function apiPost(path, body) {
+      const t1 = performance.now();
+      try {
+        const r = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        document.getElementById('sb-latency').textContent = Math.round(performance.now() - t1);
+        return await r.json();
+      } catch (e) { log('API error: ' + e.message, 'err'); return null; }
+    }
+    async function apiGet(path) {
+      try { const r = await fetch(API + path); return await r.json(); } catch (e) { return null; }
+    }
+
+    // ── Send command ──────────────────────────────────────────────
+    async function send(cmd) {
+      cmd = cmd.trim(); if (!cmd) return;
+      cmdHistory.unshift(cmd); if (cmdHistory.length > 50) cmdHistory.pop();
+      histIdx = -1;
+      log(cmd, 'tx'); txC++; document.getElementById('sb-tx').textContent = txC;
+
+      const data = await apiPost('/api/send', { command: cmd });
+      if (data && data.ok !== undefined) {
+        if (!data.ok) log('Send failed', 'err');
+      }
+      // Refresh log after short delay
+      setTimeout(refreshLog, 300);
+    }
+
+    // ── Refresh RX log from server ────────────────────────────────
+    async function refreshLog() {
+      const data = await apiGet('/api/log?n=5');
+      if (!data) return;
+      // New lines arrive at front; show any we haven't seen
+      // (Simple approach: just show the freshest line if it's new)
+      if (data.length > 0) {
+        const latest = data[0];
+        if (latest && latest.line && !latest.line.startsWith('{')) {
+          log(latest.line, 'rx');
+        }
+      }
+    }
+
+    // ── Poll latest sensor data ───────────────────────────────────
+    async function pollData() {
+      const data = await apiGet('/api/data');
+      if (!data || !data.temp) return;
+      updateSensors(data);
+    }
+
+    function updateSensors(d) {
+      if (d.temp !== undefined) { document.getElementById('v-temp').textContent = parseFloat(d.temp).toFixed(1); document.getElementById('b-temp').style.width = Math.min(100, (d.temp + 10) / 60 * 100) + '%'; }
+      if (d.hum !== undefined) { document.getElementById('v-hum').textContent = parseFloat(d.hum).toFixed(1); document.getElementById('b-hum').style.width = d.hum + '%'; }
+      if (d.wind_spd !== undefined) document.getElementById('v-wspd').textContent = parseFloat(d.wind_spd).toFixed(1);
+      if (d.wind_dir !== undefined) document.getElementById('v-wdir').textContent = d.wind_dir;
+      if (d.lux !== undefined) document.getElementById('v-lux').textContent = d.lux;
+      if (d.ts !== undefined) document.getElementById('v-ts').textContent = ts();
+      if (d.leds) {
+        ledState.red = !!d.leds.red; ledState.green = !!d.leds.green; ledState.blue = !!d.leds.blue;
+        renderLeds();
+      }
+      if (d.mode) setMode(d.mode, false);
+    }
+
+    // ── LED state ─────────────────────────────────────────────────
+    function renderLeds() {
+      ['red', 'green', 'blue'].forEach(c => {
+        const sd = document.getElementById('sdot-' + c);
+        sd.className = 'sdot' + (ledState[c] ? ' on-' + c : '');
+      });
+      document.querySelectorAll('.led-btn').forEach(b => {
+        const dc = b.dataset.c, cmd = b.dataset.cmd;
+        let active = false;
+        if (dc === 'off') active = !Object.values(ledState).some(Boolean);
+        else if (dc === 'all') active = Object.values(ledState).every(Boolean);
+        else active = ledState[dc] || false;
+        b.classList.toggle('active', active);
+      });
+    }
+
+    function applyLedCmd(cmd) {
+      if (cmd.includes('all off')) { ledState.red = ledState.green = ledState.blue = false; }
+      else if (cmd.includes('all on')) { ledState.red = ledState.green = ledState.blue = true; }
+      else if (cmd.includes('red on')) ledState.red = true;
+      else if (cmd.includes('red off')) ledState.red = false;
+      else if (cmd.includes('green on')) ledState.green = true;
+      else if (cmd.includes('green off')) ledState.green = false;
+      else if (cmd.includes('blue on')) ledState.blue = true;
+      else if (cmd.includes('blue off')) ledState.blue = false;
+      renderLeds();
+    }
+
+    // ── Mode ──────────────────────────────────────────────────────
+    function setMode(m, sendCmd = true) {
+      currentMode = m;
+      document.getElementById('hdr-mode').textContent = m.toUpperCase();
+      document.getElementById('sb-mode').textContent = m.toUpperCase();
+      document.getElementById('pv-mode').textContent = m.toUpperCase();
+      document.getElementById('tbt-title').textContent = `/dev/ttyUSB0 @ 9600 — ${m.toUpperCase()} MODE`;
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
+      if (sendCmd) send('mode ' + m);
+    }
+
+    // ── CSV list ──────────────────────────────────────────────────
+    async function refreshCsvList() {
+      const data = await apiGet('/api/csv');
+      if (!data || !data.files) return;
+      const el = document.getElementById('csv-list');
+      if (data.files.length === 0) { el.innerHTML = '<div style="font-size:11px;color:var(--muted)">No files yet.</div>'; return; }
+      el.innerHTML = data.files.map(f => `
+    <div class="csv-item">
+      <span style="font-size:10px">${f}</span>
+      <a class="csv-dl" href="${API}/api/csv/${f}" download="${f}">⬇ DL</a>
+    </div>`).join('');
+    }
+
+    // ── Connection status ─────────────────────────────────────────
+    async function checkStatus() {
+      const data = await apiGet('/api/status');
+      if (!data) {
+        setDot('raspi', 'on'); setDot('arduino', 'err');
+        return;
+      }
+      setDot('raspi', 'on');
+      setDot('arduino', data.connected ? 'on' : 'err');
+      if (data.latest && data.latest.temp) updateSensors(data.latest);
+    }
+
+    function setDot(id, s) {
+      const d = document.getElementById('dot-' + id);
+      const l = document.getElementById('lbl-' + id);
+      d.className = 'dot ' + (s === 'on' ? 'on' : s === 'err' ? 'err' : '');
+      l.textContent = id.toUpperCase() + (s === 'err' ? ' ERR' : '');
+    }
+
+    // ── Uptime ────────────────────────────────────────────────────
+    setInterval(() => {
+      const s = Math.floor((Date.now() - t0) / 1000);
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const sec = String(s % 60).padStart(2, '0');
+      document.getElementById('sb-uptime').textContent = `UP: ${h}:${m}:${sec}`;
+    }, 1000);
+
+    // ── Event wiring ──────────────────────────────────────────────
+    document.querySelectorAll('.led-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        const cmd = b.dataset.cmd;
+        applyLedCmd(cmd);
+        send(cmd);
+      });
+    });
+
+    document.querySelectorAll('.mode-tab').forEach(t => {
+      t.addEventListener('click', () => setMode(t.dataset.mode));
+    });
+
+    document.querySelectorAll('.qc').forEach(b => {
+      b.addEventListener('click', () => send(b.dataset.q));
+    });
+
+    document.getElementById('btn-send').addEventListener('click', () => {
+      const inp = document.getElementById('cmd-input');
+      send(inp.value); inp.value = '';
+    });
+
+    document.getElementById('cmd-input').addEventListener('keydown', e => {
+      const inp = e.target;
+      if (e.key === 'Enter') { send(inp.value); inp.value = ''; }
+      if (e.key === 'ArrowUp') { histIdx = Math.min(histIdx + 1, cmdHistory.length - 1); inp.value = cmdHistory[histIdx] || ''; }
+      if (e.key === 'ArrowDown') { histIdx = Math.max(histIdx - 1, -1); inp.value = histIdx >= 0 ? cmdHistory[histIdx] : ''; }
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      document.getElementById('terminal').innerHTML = '';
+      log('Terminal cleared', 'sys');
+    });
+
+    document.getElementById('interval-set').addEventListener('click', () => {
+      const v = parseInt(document.getElementById('interval-inp').value);
+      if (v >= 500 && v <= 60000) {
+        send('interval ' + v);
+        document.getElementById('pv-interval').textContent = v + ' ms';
+      } else {
+        log('Interval must be 500–60000 ms', 'err');
+      }
+    });
+
+    // ── Boot sequence ─────────────────────────────────────────────
+    (async () => {
+      log('WebConsole_Serial_Communication_with_Raspberry_Pi v1.0', 'info');
+      log('Three modes: default | interactive | hybrid', 'sys');
+      await new Promise(r => setTimeout(r, 300));
+      await checkStatus();
+      log('Polling sensor data…', 'sys');
+      await pollData();
+      await refreshCsvList();
+
+      // Auto-poll every 2.5s
+      setInterval(pollData, 2500);
+      setInterval(checkStatus, 10000);
+      setInterval(refreshCsvList, 15000);
+    })();
+  </script>
+</body>
+
+</html>
