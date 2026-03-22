@@ -13,4 +13,4 @@ cd "$(dirname "$0")/flask_app"
 
 # Start the WebConsole API server.
 echo "Starting WebConsole server on port 5000…"
-python app.py
+python3 app.py
