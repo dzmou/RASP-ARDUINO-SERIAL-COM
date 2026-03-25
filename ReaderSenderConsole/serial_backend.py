@@ -62,7 +62,7 @@ class SerialBackend:
         """Sends a 1 number to the serial port without extra characters (e.g. no newline)."""
         if self.ser and self.ser.is_open:
             try:
-                self.ser.write(b'1') # send 1 number without newline
+                self.ser.write(1) # send 1 number without newline
                 return True
             except:
                 return False
