@@ -82,3 +82,41 @@ class SerialBackend:
                     self.running = False
                     break
             time.sleep(0.01)
+
+    def wakeup_datahog(self):
+        WAKEUP_CHAR = b'1'  # Any numeric key (0-9) works
+        ESC_CHAR = b'\x1b'  # ESC character to return to sleep/log mode
+
+        if self.ser and self.ser.is_open:
+            try:
+                self._update_display("Initiating wake-up sequence (duration: 12 seconds)...")
+            
+                start_time = time.time()
+                # Send numeric key repeatedly for slightly over the 10s wake-up period
+                while time.time() - start_time < 12:
+                    self.ser.write(WAKEUP_CHAR)
+                    time.sleep(1)  # Interval between attempts
+                    
+                    # Check if device responded with the Main Menu
+                    if self.ser.in_waiting > 0:
+                        response = self.ser.read(self.ser.in_waiting).decode('ascii', errors='ignore')
+                        if "Main Menu" in response or response.strip():
+                            self._update_display("Device Awakened: Main Menu accessed.")
+                            return True
+                
+                self._update_display("Wake-up attempt complete.")
+            except Exception as e:
+                self._update_display(f"Connection Error: {e}")
+        return False
+
+    def sleep_datahog(self):
+        # Sending ESC returns the device to sleep/log mode
+        ESC_CHAR = b'\x1b'  # ESC character to return to sleep/log mode
+        if self.ser and self.ser.is_open:
+            try:
+                self.ser.write(ESC_CHAR)
+                self._update_display("ESC sent: Device returning to sleep/logging mode.")
+                return True
+            except Exception as e:
+                self._update_display(f"Error sending sleep command: {e}")
+        return False
