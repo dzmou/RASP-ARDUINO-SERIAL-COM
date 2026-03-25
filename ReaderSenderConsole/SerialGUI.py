@@ -37,6 +37,7 @@ class SerialGui:
         tk.Frame(toolbar, width=20).pack(side=tk.LEFT)
 
         tk.Button(toolbar, text="Clear Log", command=self.clear_log).pack(side=tk.LEFT, padx=2)
+        tk.Button(toolbar, text="WakeUP", command=self.wake_up, bg="#fffec8").pack(side=tk.LEFT, padx=10) # Dedicated WakeUp button
         tk.Button(toolbar, text="Font +", command=lambda: self.change_font(1)).pack(side=tk.LEFT, padx=2)
         tk.Button(toolbar, text="Font -", command=lambda: self.change_font(-1)).pack(side=tk.LEFT, padx=2)
         tk.Button(toolbar, text="Reset Font", command=lambda: self.change_font(0)).pack(side=tk.LEFT, padx=2)
@@ -74,7 +75,7 @@ class SerialGui:
         tag = None
         if text.startswith("SYSTEM"): tag = "system"
         elif text.startswith("YOU"): tag = "user"
-        elif text.startswith("DEVICE"): tag = "device"
+        elif text.startswith("\t:"): tag = "device" # Match the new tab prefix
         elif "ERROR" in text: tag = "error"
         
         self.display.insert(tk.END, text + '\n', tag)
@@ -119,6 +120,13 @@ class SerialGui:
         self.display.configure(state='normal')
         self.display.delete('1.0', tk.END)
         self.display.configure(state='disabled')
+
+    def wake_up(self):
+        """Sends a numeric key ('1') to wake up the device."""
+        if self.backend.write("1"):
+            self._update_display("YOU: [WakeUP] 1")
+        elif not self.is_connected:
+            messagebox.showwarning("Warning", "Serial is not connected.")
 
     def change_font(self, delta):
         """Adjusts font size or resets to default."""
