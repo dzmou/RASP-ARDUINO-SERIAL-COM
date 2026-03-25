@@ -45,10 +45,24 @@ class SerialBackend:
         self.ser = None
 
     def write(self, msg):
-        """Sends a message to the serial port."""
+        """Sends a message to the serial port with a newline."""
+        return self.write_raw(msg + '\n')
+
+    def write_raw(self, msg):
+        """Sends a message to the serial port without extra characters (e.g. no newline)."""
         if self.ser and self.ser.is_open:
             try:
-                self.ser.write((msg + '\n').encode('utf-8'))
+                self.ser.write(msg.encode('utf-8'))
+                return True
+            except:
+                return False
+        return False
+
+    def write_nb_1(self):
+        """Sends a 1 number to the serial port without extra characters (e.g. no newline)."""
+        if self.ser and self.ser.is_open:
+            try:
+                self.ser.write(b'1') # send 1 number without newline
                 return True
             except:
                 return False

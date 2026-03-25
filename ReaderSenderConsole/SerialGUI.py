@@ -122,9 +122,9 @@ class SerialGui:
         self.display.configure(state='disabled')
 
     def wake_up(self):
-        """Sends a numeric key ('1') to wake up the device."""
-        if self.backend.write("1"):
-            self._update_display("YOU: [WakeUP] 1")
+        """Sends a numeric key ('1') to wake up the device without newline."""
+        if self.backend.write_raw("1"):
+            self._update_display("YOU: [WakeUP] 1 (raw)")
         elif not self.is_connected:
             messagebox.showwarning("Warning", "Serial is not connected.")
 
