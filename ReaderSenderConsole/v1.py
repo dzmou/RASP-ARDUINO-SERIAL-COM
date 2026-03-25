@@ -8,15 +8,19 @@ def read_from_port(ser):
         if ser.in_waiting > 0:
             try:
                 line = ser.readline().decode('utf-8').rstrip()
-                print(f"\n[RECEIVE]: {line}")
+                print(f": {line}")
             except Exception as e:
                 print(f"Read error: {e}")
                 break
 
+#Function to read from popup box, Graphics User Interface
+def read_from_popup_box():
+    msg = input("[SEND]: ")
+    return msg
 # Function for the sending thread
 def send_to_port(ser):
     while True:
-        msg = input("[SEND]: ")
+        msg = read_from_popup_box()
         if msg:
             ser.write(('\n==============================='+msg + '\n').encode('utf-8'))
 
