@@ -37,7 +37,7 @@ class SerialGui:
         tk.Frame(toolbar, width=20).pack(side=tk.LEFT)
 
         tk.Button(toolbar, text="Clear Log", command=self.clear_log).pack(side=tk.LEFT, padx=2)
-        tk.Button(toolbar, text="WakeUP", command=self.wake_up, bg="#fffec8").pack(side=tk.LEFT, padx=10) # Dedicated WakeUp button
+        tk.Button(toolbar, text="WakeUP", command=self.wakeup_datahog, bg="#fffec8").pack(side=tk.LEFT, padx=10) # Dedicated WakeUp button
         tk.Button(toolbar, text="Font +", command=lambda: self.change_font(1)).pack(side=tk.LEFT, padx=2)
         tk.Button(toolbar, text="Font -", command=lambda: self.change_font(-1)).pack(side=tk.LEFT, padx=2)
         tk.Button(toolbar, text="Reset Font", command=lambda: self.change_font(0)).pack(side=tk.LEFT, padx=2)
@@ -149,6 +149,50 @@ class SerialGui:
             
         # Rescan every 3 seconds
         self.root.after(3000, self.refresh_ports)
+
+    def wakeup_datahog(self):
+        WAKEUP_CHAR = b'1'  # Any numeric key (0-9) works
+        ESC_CHAR = b'\x1b'  # ESC character to return to sleep/log mode
+
+        if not self.is_connected:
+            try:
+                self._update_display("Initiating wake-up sequence (duration: 12 seconds)...")
+            
+                start_time = time.time()
+                # Send numeric key repeatedly for slightly over the 10s wake-up period
+                while time.time() - start_time < 12:
+                    self.ser.write(WAKEUP_CHAR)
+                    time.sleep(1)  # Interval between attempts
+                    
+                    # Check if device responded with the Main Menu
+                    if self.ser.in_waiting > 0:
+                        response = self.ser.read(self.ser.in_waiting).decode('ascii', errors='ignore')
+                        if "Main Menu" in response or response.strip():
+                            self._update_display("Device Awakened: Main Menu accessed.")
+                            return True
+                
+                self._update_display("Wake-up attempt complete.")
+            except Exception as e:
+                self._update_display(f"Connection Error: {e}")
+                return False
+        else:
+            self._update_display("Serial is not connected.")
+            return False    
+
+    def sleep_datahog(self):
+        # Sending ESC returns the device to sleep/log mode
+        ESC_CHAR = b'\x1b'  # ESC character to return to sleep/log mode
+        if not self.is_connected:
+            try:
+                self.ser.write(ESC_CHAR)
+                self._update_display("ESC sent: Device returning to sleep/logging mode.")
+                return True
+            except Exception as e:
+                self._update_display(f"Error sending sleep command: {e}")
+                return False
+        else:
+            self._update_display("Serial is not connected.")
+            return False
 
 if __name__ == '__main__':
     root = tk.Tk()
