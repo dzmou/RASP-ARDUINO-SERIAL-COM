@@ -158,27 +158,27 @@ class SerialGui:
 
         if self.is_connected:
             try:
-                self._update_display("Initiating wake-up sequence (duration: 12 seconds)...")
+                self._update_display("\n-wakeup_datahog()-Initiating wake-up sequence (duration: 12 seconds)...")
             
                 start_time = time.time()
                 # Send numeric key repeatedly for slightly over the 10s wake-up period
                 while time.time() - start_time < 12:
-                    self.ser.write(WAKEUP_CHAR)
+                    self.backend.write_raw(WAKEUP_CHAR)
                     time.sleep(1)  # Interval between attempts
                     
                     # Check if device responded with the Main Menu
-                    if self.ser.in_waiting > 0:
-                        response = self.ser.read(self.ser.in_waiting).decode('ascii', errors='ignore')
+                    if self.backend.ser.in_waiting > 0:
+                        response = self.backend.ser.read(self.backend.ser.in_waiting).decode('ascii', errors='ignore')
                         if "Main Menu" in response or response.strip():
-                            self._update_display("Device Awakened: Main Menu accessed.")
+                            self._update_display("\n-wakeup_datahog()-Device Awakened: Main Menu accessed.")
                             return True
                 
-                self._update_display("Wake-up attempt complete.")
+                self._update_display("\n-wakeup_datahog()-Wake-up attempt complete.")
             except Exception as e:
-                self._update_display(f"Connection Error: {e}")
+                self._update_display(f"\n-wakeup_datahog()-Connection Error: {e}")
                 return False
         else:
-            self._update_display("Serial is not connected.")
+            self._update_display("\n-wakeup_datahog()-Serial is not connected.")
             return False    
 
     def sleep_datahog(self):
@@ -186,14 +186,14 @@ class SerialGui:
         ESC_CHAR = b'\x1b'  # ESC character to return to sleep/log mode
         if self.is_connected:
             try:
-                self.ser.write(ESC_CHAR)
-                self._update_display("ESC sent: Device returning to sleep/logging mode.")
+                self.backend.write_raw(ESC_CHAR)
+                self._update_display("\n-sleep_datahog()-ESC sent: Device returning to sleep/logging mode.")
                 return True
             except Exception as e:
-                self._update_display(f"Error sending sleep command: {e}")
+                self._update_display(f"\n-sleep_datahog()-Error sending sleep command: {e}")
                 return False
         else:
-            self._update_display("Serial is not connected.")
+            self._update_display("\n-sleep_datahog()-Serial is not connected.")
             return False
 
 if __name__ == '__main__':

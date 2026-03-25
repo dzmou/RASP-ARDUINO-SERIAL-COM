@@ -6,6 +6,7 @@ import time
 class SerialBackend:
     """Handles serial communication logic independently of the GUI."""
     def __init__(self, callback):
+        #global attributes
         self.ser = None
         self.callback = callback
         self.running = False
