@@ -169,7 +169,8 @@ class SerialGui:
                     # Check if device responded with the Main Menu
                     if self.backend.ser.in_waiting > 0:
                         response = self.backend.ser.read(self.backend.ser.in_waiting).decode('ascii', errors='ignore')
-                        if "Main Menu" in response or response.strip():
+                        # if contains "Main Menu"
+                        if "Main Menu" in response:
                             self._update_display("\n-wakeup_datahog()-Device Awakened: Main Menu accessed.")
                             return True
                 
