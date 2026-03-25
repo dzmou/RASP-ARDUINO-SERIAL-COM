@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import scrolledtext, ttk, messagebox
 from serial_backend import SerialBackend
+import time
+
 
 class SerialGui:
     """Manages the Tkinter interface and interacts with SerialBackend."""
